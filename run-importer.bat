@@ -1,0 +1,1 @@
+docker run --rm --network coursework_default -e DATABASE_URL="postgres://gisuser:gispass@db:5432/gisdb?sslmode=disable" -v "%CD%:/app" -w /app golang:1.26 go run ./cmd/importer/
