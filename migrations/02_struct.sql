@@ -13,11 +13,10 @@ CREATE TABLE nodes (
 
 CREATE TABLE roads (
     id BIGSERIAL PRIMARY KEY,
-    geom GEOMETRY(LineString, 4326),
     from_node BIGINT,
     to_node BIGINT,
     weight_road FLOAT,
-    oneway BOOLEAN,
+    oneway TEXT,
     highway TEXT,
     FOREIGN KEY (from_node) REFERENCES nodes(id),
     FOREIGN KEY (to_node) REFERENCES nodes(id)
