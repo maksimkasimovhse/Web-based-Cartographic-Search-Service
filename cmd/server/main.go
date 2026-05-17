@@ -7,7 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/maksimkasimovhse/Web-based-Cartographic-Search-Service/internal/db"
-	places "github.com/maksimkasimovhse/Web-based-Cartographic-Search-Service/internal/handlers"
+	"github.com/maksimkasimovhse/Web-based-Cartographic-Search-Service/internal/graph"
+	"github.com/maksimkasimovhse/Web-based-Cartographic-Search-Service/internal/handlers"
 )
 
 func corsMiddleware() func(*gin.Context) {
@@ -33,6 +34,10 @@ func main() {
 
 	router := gin.Default()
 	router.Use(corsMiddleware())
-	router.GET("/places/nearby", places.NearbyPlaces(conn))
+	router.GET("/places/nearby", handlers.NearbyPlaces(conn))
+
+	gr := &graph.Graph{}
+	gr.LoadGraph(ctx, conn)
+	router.GET("/route", handlers.RouteHandler(gr, conn))
 	router.Run(":8080")
 }

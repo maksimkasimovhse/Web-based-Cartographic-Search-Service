@@ -13,23 +13,25 @@ type Edge struct {
 }
 
 type Graph struct {
-	graph map[int64][]Edge
+	graph  map[int64][]Edge
+	Coords map[int64][2]float64
 }
 
 func (gr *Graph) LoadGraph(ctx context.Context, pool *pgxpool.Pool) (*Graph, error) {
 	gr.graph = make(map[int64][]Edge)
+	gr.Coords = make(map[int64][2]float64)
 	query := `SELECT from_node, to_node, weight_road, oneway FROM roads`
 	rows, err := pool.Query(ctx, query)
 	if err != nil {
-		fmt.Println("Ошибка SELECT из roads")
+		fmt.Println("Ошибка SELECT из roads: ", err)
 		return nil, err
 	}
 	for rows.Next() {
 		var from_node, to_node int64
 		var weight_road float64
-		var oneway string
+		var oneway *bool
 		rows.Scan(&from_node, &to_node, &weight_road, &oneway)
-		if oneway == "yes" {
+		if oneway != nil && *oneway {
 			gr.graph[from_node] = append(gr.graph[from_node], Edge{to_node: to_node, weight: weight_road})
 		} else {
 			gr.graph[from_node] = append(gr.graph[from_node], Edge{to_node: to_node, weight: weight_road})
@@ -39,6 +41,23 @@ func (gr *Graph) LoadGraph(ctx context.Context, pool *pgxpool.Pool) (*Graph, err
 	if rows.Err() != nil {
 		fmt.Println("Ошибка построения графа: ", rows.Err())
 		return nil, rows.Err()
+	}
+
+	query2 := `SELECT id, ST_X(geom), ST_Y(geom) FROM nodes`
+	rows2, err := pool.Query(ctx, query2)
+	if err != nil {
+		fmt.Println("Ошибка SELECT из nodes: ", err)
+		return nil, err
+	}
+	for rows2.Next() {
+		var id int64
+		var x, y float64
+		rows2.Scan(&id, &x, &y)
+		gr.Coords[id] = [2]float64{x, y}
+	}
+	if rows2.Err() != nil {
+		fmt.Println("Ошибка занесения координат: ", rows2.Err())
+		return nil, rows2.Err()
 	}
 
 	return gr, nil
