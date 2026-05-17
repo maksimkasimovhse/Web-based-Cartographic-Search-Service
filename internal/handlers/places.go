@@ -9,9 +9,9 @@ import (
 )
 
 type Feature struct {
-	Type      string     `json:"type"`
+	Type       string     `json:"type"`
 	Properties Properties `json:"properties"`
-	Geometry  Geometry   `json:"geometry"`
+	Geometry   Geometry   `json:"geometry"`
 }
 
 type Properties struct {
@@ -56,7 +56,6 @@ func NearbyPlaces(pool *pgxpool.Pool) gin.HandlerFunc {
 
 		ctx := c.Request.Context()
 
-		log.Printf("query params: category=%s lat=%f lon=%f radius=%f", category, latF, lonF, radiusI)
 		rows, err := pool.Query(ctx, `SELECT osm_id, name, category, ST_X(geom), ST_Y(geom) FROM places WHERE (category = $1 OR $1 = '') AND ST_DWithin(geom::geography, ST_SetSRID(ST_Point($2, $3), 4326)::geography, $4)`, category, lonF, latF, radiusI)
 		if err != nil {
 			log.Println("Ошибка SELECT-запроса", err)
@@ -66,7 +65,7 @@ func NearbyPlaces(pool *pgxpool.Pool) gin.HandlerFunc {
 		defer rows.Close()
 
 		collection := FeatureCollection{
-			Type: "FeatureCollection",
+			Type:     "FeatureCollection",
 			Features: []Feature{},
 		}
 
@@ -79,16 +78,16 @@ func NearbyPlaces(pool *pgxpool.Pool) gin.HandlerFunc {
 				log.Println("Ошибка чтения строки", err)
 				continue
 			}
-			
+
 			feature := Feature{
 				Type: "Feature",
-				Properties : Properties{
-					OsmID: osm_id,
-					Name: name,
+				Properties: Properties{
+					OsmID:    osm_id,
+					Name:     name,
 					Category: category,
 				},
 				Geometry: Geometry{
-					Type: "Point",
+					Type:        "Point",
 					Coordinates: []float64{x, y},
 				},
 			}
