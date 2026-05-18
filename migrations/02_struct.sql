@@ -16,7 +16,7 @@ CREATE TABLE roads (
     from_node BIGINT,
     to_node BIGINT,
     weight_road FLOAT,
-    oneway TEXT,
+    oneway BOOLEAN,
     highway TEXT,
     FOREIGN KEY (from_node) REFERENCES nodes(id),
     FOREIGN KEY (to_node) REFERENCES nodes(id)
