@@ -2,6 +2,7 @@ package graph
 
 import (
 	"container/heap"
+	"fmt"
 	"math"
 )
 
@@ -47,7 +48,7 @@ func (gr *Graph) Dijkstra(node_from int64, node_to int64) ([]int64, bool) {
 			continue
 		}
 		for _, edge := range gr.graph[item.node_id] {
-			if item.dist+edge.weight < dist[edge.to_node] {
+			if d, ok := dist[edge.to_node]; !ok || item.dist+edge.weight < d {
 				dist[edge.to_node] = item.dist + edge.weight
 				prev[edge.to_node] = item.node_id
 				heap.Push(&pq, &Node{node_id: edge.to_node, dist: dist[edge.to_node]})
@@ -55,6 +56,7 @@ func (gr *Graph) Dijkstra(node_from int64, node_to int64) ([]int64, bool) {
 		}
 	}
 
+	fmt.Println("dist[node_to]:", dist[node_to])
 	if dist[node_to] == math.Inf(1) {
 		return nil, false
 	}
@@ -64,7 +66,7 @@ func (gr *Graph) Dijkstra(node_from int64, node_to int64) ([]int64, bool) {
 		path = append(path, a)
 	}
 
-	for i, j := 0, len(path) - 1; i < j; i, j = i + 1, j - 1 {
+	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
 		path[i], path[j] = path[j], path[i]
 	}
 

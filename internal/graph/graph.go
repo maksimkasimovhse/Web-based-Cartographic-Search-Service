@@ -60,5 +60,7 @@ func (gr *Graph) LoadGraph(ctx context.Context, pool *pgxpool.Pool) (*Graph, err
 		return nil, rows2.Err()
 	}
 
+	fmt.Println("рёбер в графе от узла 0:", len(gr.graph[0]))
+	fmt.Println("рёбер в графе от узла 142242:", len(gr.graph[142242]))
 	return gr, nil
 }

@@ -38,6 +38,7 @@ func main() {
 
 	gr := &graph.Graph{}
 	gr.LoadGraph(ctx, conn)
+	fmt.Println("граф загружен, узлов:", len(gr.Coords))
 	router.GET("/route", handlers.RouteHandler(gr, conn))
 	router.Run(":8080")
 }

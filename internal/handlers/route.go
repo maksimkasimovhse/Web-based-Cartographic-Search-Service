@@ -32,6 +32,7 @@ func RouteHandler(gr *graph.Graph, pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		idFROM, err := graph.SnapToGraph(c.Request.Context(), pool, fromLat, fromLon)
+		fmt.Println("idFROM:", *idFROM)
 		if err != nil {
 			fmt.Println("Ошибка SnapToGraph: ", err)
 			c.JSON(400, gin.H{"error": "invalid coordinates"})
@@ -39,6 +40,7 @@ func RouteHandler(gr *graph.Graph, pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		idTO, err := graph.SnapToGraph(c.Request.Context(), pool, toLat, toLon)
+		fmt.Println("idTO:", *idTO)
 		if err != nil {
 			fmt.Println("Ошибка SnapToGraph: ", err)
 			c.JSON(400, gin.H{"error": "invalid coordinates"})
