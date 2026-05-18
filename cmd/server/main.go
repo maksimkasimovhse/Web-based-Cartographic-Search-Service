@@ -36,9 +36,13 @@ func main() {
 	router.Use(corsMiddleware())
 	router.GET("/places/nearby", handlers.NearbyPlaces(conn))
 
-	gr := &graph.Graph{}
-	gr.LoadGraph(ctx, conn)
-	router.GET("/route", handlers.RouteHandler(gr, conn))
+	grWalk := &graph.Graph{}
+	grWalk.LoadGraph(ctx, conn, "walk")
+
+	grCar := &graph.Graph{}
+	grCar.LoadGraph(ctx, conn, "car")
+
+	router.GET("/route", handlers.RouteHandler(grWalk, grCar, conn))
 	router.Static("/static", "./static")
 	router.StaticFile("/", "./static/index.html")
 	router.Run(":8080")

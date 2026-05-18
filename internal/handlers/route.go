@@ -13,8 +13,14 @@ func parseFloat(s string) (float64, error) {
 	return strconv.ParseFloat(s, 64)
 }
 
-func RouteHandler(gr *graph.Graph, pool *pgxpool.Pool) gin.HandlerFunc {
+func RouteHandler(grWalk *graph.Graph, grCar *graph.Graph, pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		mode := c.DefaultQuery("mode", "walk")
+		gr := grWalk
+		if mode == "car" {
+			gr = grCar
+		}
+
 		from_lat := c.Query("latFrom")
 		from_lon := c.Query("lonFrom")
 		to_lat := c.Query("latTo")
@@ -47,7 +53,7 @@ func RouteHandler(gr *graph.Graph, pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		way, ok := gr.Dijkstra(*idFROM, *idTO)
+		way, distance, ok := gr.Dijkstra(*idFROM, *idTO)
 		if !ok {
 			fmt.Println("Ошибка Дейкстры: ", err)
 			c.JSON(404, gin.H{"error": "route not found"})
@@ -59,8 +65,7 @@ func RouteHandler(gr *graph.Graph, pool *pgxpool.Pool) gin.HandlerFunc {
 			g = append(g, gr.Coords[id])
 		}
 
-		c.JSON(200, gin.H{"type": "Feature", "geometry": gin.H{"type": "LineString", "coordinates": g}, })
-
+		c.JSON(200, gin.H{"type": "Feature", "distance": distance, "geometry": gin.H{"type": "LineString", "coordinates": g}})
 
 	}
 }

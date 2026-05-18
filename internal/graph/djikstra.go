@@ -29,7 +29,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 	return item
 }
 
-func (gr *Graph) Dijkstra(node_from int64, node_to int64) ([]int64, bool) {
+func (gr *Graph) Dijkstra(node_from int64, node_to int64) ([]int64, float64, bool) {
 	dist := make(map[int64]float64)
 	prev := make(map[int64]int64)
 
@@ -58,7 +58,7 @@ func (gr *Graph) Dijkstra(node_from int64, node_to int64) ([]int64, bool) {
 
 	fmt.Println("dist[node_to]:", dist[node_to])
 	if dist[node_to] == math.Inf(1) {
-		return nil, false
+		return nil, 0, false
 	}
 
 	var path []int64
@@ -70,5 +70,5 @@ func (gr *Graph) Dijkstra(node_from int64, node_to int64) ([]int64, bool) {
 		path[i], path[j] = path[j], path[i]
 	}
 
-	return path, true
+	return path, dist[node_to], true
 }

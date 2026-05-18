@@ -125,6 +125,27 @@
       color: var(--text-muted);
     }
 
+    select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Golos Text', sans-serif;
+      font-size: 14px;
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7080' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+
+    select:focus { border-color: var(--accent); }
+
     .btn {
       display: flex;
       align-items: center;
@@ -276,6 +297,24 @@
     <!-- Геолокация + поиск -->
     <div class="control-card">
       <label>Поиск объектов</label>
+      <select id="categorySelect">
+        <option value="">Все категории</option>
+        <option>Заправка</option>
+        <option>Паркинг</option>
+        <option>Магазин электроники</option>
+        <option>Банкомат</option>
+        <option>Алкомаркет</option>
+        <option>Кафе</option>
+        <option>Супермаркет</option>
+        <option>Бар</option>
+        <option>Парикмахерская</option>
+        <option>Магазин одежды</option>
+        <option>Ресторан</option>
+        <option>Банк</option>
+        <option>Ремонт автомобиля</option>
+        <option>Фастфуд</option>
+        <option>Клиника</option>
+      </select>
       <div class="row">
         <input type="number" id="radius" placeholder="Радиус, м" value="1000" min="100" max="10000" step="100" />
         <button class="btn btn-ghost" id="geoBtn" title="Определить моё местоположение">
@@ -290,6 +329,18 @@
         </button>
       </div>
       <div class="status" id="searchStatus"></div>
+      <button class="btn btn-ghost" id="pickStartBtn" style="width:100%;margin-top:6px;">
+        📌 Выбрать точку старта на карте
+      </button>
+    </div>
+
+    <!-- Режим транспорта -->
+    <div class="control-card">
+      <label>Режим передвижения</label>
+      <div class="row">
+        <button class="btn btn-accent transport-btn" id="btnWalk" data-mode="walk">🚶 Пешком</button>
+        <button class="btn btn-ghost transport-btn" id="btnCar" data-mode="car">🚗 Машина</button>
+      </div>
     </div>
 
     <!-- Инфо маршрута -->
@@ -317,8 +368,12 @@
   let userLat = null;
   let userLon = null;
   let userMarker = null;
+  let customStartLat = null;
+  let customStartLon = null;
+  let customStartMarker = null;
   let placeMarkers = L.layerGroup().addTo(map);
   let routeLayer = null;
+  let pickingStart = false;
 
   // ─── Иконки ──────────────────────────────────────────────────
   const userIcon = L.divIcon({
@@ -331,17 +386,64 @@
     iconAnchor: [7, 7],
   });
 
-  const placeIcon = L.divIcon({
+  const categoryEmoji = {
+    'Заправка': '⛽',
+    'Паркинг': '🅿️',
+    'Магазин электроники': '💻',
+    'Банкомат': '🏧',
+    'Алкомаркет': '🍷',
+    'Кафе': '☕',
+    'Супермаркет': '🛒',
+    'Бар': '🍺',
+    'Парикмахерская': '✂️',
+    'Магазин одежды': '👗',
+    'Ресторан': '🍽️',
+    'Банк': '🏦',
+    'Ремонт автомобиля': '🔧',
+    'Фастфуд': '🍔',
+    'Клиника': '🏥',
+  };
+
+  function makePlaceIcon(category) {
+    const emoji = categoryEmoji[category] || '📍';
+    return L.divIcon({
+      className: '',
+      html: `<div style="font-size:20px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.7));cursor:pointer;">${emoji}</div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+  }
+
+  const customStartIcon = L.divIcon({
     className: '',
     html: `<div style="
-      width:10px;height:10px;background:#c8f04a;border-radius:50%;
-      border:2px solid #0e0f13;opacity:0.9">
+      width:14px;height:14px;background:#ff4444;border-radius:50%;
+      border:2px solid #0e0f13;box-shadow:0 0 0 4px rgba(255,68,68,0.25)">
     </div>`,
-    iconSize: [10, 10],
-    iconAnchor: [5, 5],
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 
-  // ─── Геолокация ──────────────────────────────────────────────
+  // ─── Клик по карте — выбор точки старта ──────────────────────
+  map.on('click', e => {
+    if (!pickingStart) return;
+    customStartLat = e.latlng.lat;
+    customStartLon = e.latlng.lng;
+    if (customStartMarker) customStartMarker.remove();
+    customStartMarker = L.marker([customStartLat, customStartLon], { icon: customStartIcon })
+      .bindTooltip('Старт', { permanent: false })
+      .addTo(map);
+    pickingStart = false;
+    map.getContainer().style.cursor = '';
+    setStatus('Точка старта выбрана. Кликни на маркер объекта.', 'ok');
+  });
+  const pickStartBtn = document.getElementById('pickStartBtn');
+  pickStartBtn.addEventListener('click', () => {
+    pickingStart = true;
+    map.getContainer().style.cursor = 'crosshair';
+    setStatus('Кликни на карту чтобы выбрать точку старта…', '');
+  });
+
   const geoBtn = document.getElementById('geoBtn');
   const searchStatus = document.getElementById('searchStatus');
 
@@ -361,6 +463,10 @@
         userMarker = L.marker([userLat, userLon], { icon: userIcon })
           .bindTooltip('Вы здесь', { permanent: false })
           .addTo(map);
+        // Сбрасываем кастомный старт — теперь маршрут от геолокации
+        customStartLat = null;
+        customStartLon = null;
+        if (customStartMarker) { customStartMarker.remove(); customStartMarker = null; }
         setStatus('Местоположение определено', 'ok');
         geoBtn.disabled = false;
       },
@@ -381,12 +487,13 @@
       return;
     }
     const radius = parseFloat(radiusInput.value) || 1000;
+    const category = document.getElementById('categorySelect').value;
     setLoading(searchBtn, true);
     setStatus('Ищу объекты…', '');
     placeMarkers.clearLayers();
 
     try {
-      const url = `/places/nearby?lat=${userLat}&lon=${userLon}&radius=${radius}`;
+      const url = `/places/nearby?lat=${userLat}&lon=${userLon}&radius=${radius}&category=${encodeURIComponent(category)}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Ошибка сервера');
       const geojson = await res.json();
@@ -409,7 +516,7 @@
     const [lon, lat] = feature.geometry.coordinates;
     const { name, category } = feature.properties;
 
-    const marker = L.marker([lat, lon], { icon: placeIcon });
+    const marker = L.marker([lat, lon], { icon: makePlaceIcon(category) });
 
     const popupHtml = `
       <div class="popup-name">${name || 'Без названия'}</div>
@@ -423,14 +530,39 @@
     placeMarkers.addLayer(marker);
   }
 
+  // ─── Режим транспорта ────────────────────────────────────────
+  let transportMode = 'walk'; // walk | car
+  document.querySelectorAll('.transport-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      transportMode = btn.dataset.mode;
+      document.querySelectorAll('.transport-btn').forEach(b => {
+        b.className = b.dataset.mode === transportMode
+          ? 'btn btn-accent transport-btn'
+          : 'btn btn-ghost transport-btn';
+      });
+    });
+  });
+
+  function formatTime(distanceMeters) {
+    const speed = transportMode === 'car' ? 40 : 5; // км/ч
+    const minutes = Math.round(distanceMeters / 1000 / speed * 60);
+    if (minutes < 60) return `${minutes} мин`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h} ч ${m} мин` : `${h} ч`;
+  }
+
   // ─── Маршрут ─────────────────────────────────────────────────
   const routeInfo = document.getElementById('routeInfo');
   const routeInfoText = document.getElementById('routeInfoText');
   const clearRouteBtn = document.getElementById('clearRouteBtn');
 
   async function buildRoute(toLat, toLon, name, btn) {
-    if (userLat === null) {
-      alert('Сначала определите своё местоположение');
+    const fromLat = customStartLat !== null ? customStartLat : userLat;
+    const fromLon = customStartLon !== null ? customStartLon : userLon;
+
+    if (fromLat === null) {
+      alert('Сначала определите местоположение или выберите точку старта на карте');
       return;
     }
 
@@ -440,7 +572,7 @@
     if (routeLayer) { routeLayer.remove(); routeLayer = null; }
 
     try {
-      const url = `/route?latFrom=${userLat}&lonFrom=${userLon}&latTo=${toLat}&lonTo=${toLon}`;
+      const url = `/route?latFrom=${fromLat}&lonFrom=${fromLon}&latTo=${toLat}&lonTo=${toLon}&mode=${transportMode}`;
       const res = await fetch(url);
       if (res.status === 404) throw new Error('not_found');
       if (!res.ok) throw new Error('server');
@@ -449,14 +581,16 @@
       const coords = data.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
 
       routeLayer = L.polyline(coords, {
-        color: '#c8f04a',
+        color: '#ff4444',
         weight: 4,
         opacity: 0.9,
       }).addTo(map);
 
       map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
 
-      routeInfoText.textContent = `→ ${name}`;
+      const km = (data.distance / 1000).toFixed(1);
+      const time = formatTime(data.distance);
+      routeInfoText.textContent = `→ ${name} · ${km} км · ${time}`;
       routeInfo.classList.add('visible');
 
     } catch (e) {

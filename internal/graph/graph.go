@@ -17,10 +17,15 @@ type Graph struct {
 	Coords map[int64][2]float64
 }
 
-func (gr *Graph) LoadGraph(ctx context.Context, pool *pgxpool.Pool) (*Graph, error) {
+func (gr *Graph) LoadGraph(ctx context.Context, pool *pgxpool.Pool, mode string) (*Graph, error) {
 	gr.graph = make(map[int64][]Edge)
 	gr.Coords = make(map[int64][2]float64)
-	query := `SELECT from_node, to_node, weight_road, oneway FROM roads`
+	var query string
+	if mode == "car" {
+		query = `SELECT from_node, to_node, weight_road, oneway FROM roads WHERE highway IN ('motorway','primary','primary_link','secondary','secondary_link','tertiary','tertiary_link','residential','living_street','service')`
+	} else {
+		query = `SELECT from_node, to_node, weight_road, oneway FROM roads`
+	}
 	rows, err := pool.Query(ctx, query)
 	if err != nil {
 		fmt.Println("Ошибка SELECT из roads: ", err)
